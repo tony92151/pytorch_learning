@@ -64,11 +64,11 @@ plt.ylabel('Tcal-T')
 # In[31]:
 
 
-x = torch.unsqueeze(torch.from_numpy(n), dim=1).float()
+x = torch.unsqueeze(torch.from_numpy(n), dim=1).float().cuda()
 #print(x)
-y = torch.unsqueeze(torch.from_numpy(DT), dim=1).float()
+y = torch.unsqueeze(torch.from_numpy(DT), dim=1).float().cuda()
 
-plt.plot(x.data.numpy(), y.data.numpy(), 'r-', lw=2)
+plt.plot(x.data.cpu().numpy(), y.data.cpu().numpy(), 'r-', lw=2)
 
 
 # In[33]:
@@ -110,6 +110,7 @@ class Net(torch.nn.Module):
 
 
 net = Net(n_feature=1, n_hidden=50, n_output=1)     # define the network
+net.cuda()
 print(net)  # net architecture
 
 optimizer = torch.optim.SGD(net.parameters(), lr=0.05)
@@ -129,9 +130,9 @@ for t in range(20000):
     if t % 500 == 0:
         # plot and show learning process
         plt.cla()
-        plt.scatter(x.data.numpy(), y.data.numpy())
-        plt.plot(x.data.numpy(), prediction.data.numpy(), 'r-', lw=5)
-        plt.text(0.5, 0, 'Loss=%.4f' % loss.data.numpy(), fontdict={'size': 20, 'color':  'red'})
+        plt.scatter(x.data.cpu().numpy(), y.data.cpu().numpy())
+        plt.plot(x.data.cpu().numpy(), prediction.data.cpu().numpy(), 'r-', lw=5)
+        plt.text(0.5, 0, 'Loss=%.4f' % loss.data.cpu().numpy(), fontdict={'size': 20, 'color':  'red'})
         plt.pause(0.1)
 
 plt.ioff()
