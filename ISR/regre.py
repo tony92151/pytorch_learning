@@ -109,10 +109,10 @@ class Net(torch.nn.Module):
 # In[43]:
 
 
-net = Net(n_feature=1, n_hidden=50, n_output=1)     # define the network
+net = Net(n_feature=1, n_hidden=60, n_output=1)     # define the network
 print(net)  # net architecture
 
-optimizer = torch.optim.SGD(net.parameters(), lr=0.05)
+optimizer = torch.optim.SGD(net.parameters(), lr=0.1)
 loss_func = torch.nn.MSELoss()  # this is for regression mean squared loss
 
 plt.ion()   # something about plotting
