@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
 
 #https://discuss.pytorch.org/t/pytorch-trained-model-on-webcam/23928/5
 import numpy as np  
@@ -12,7 +8,8 @@ import torchvision
 from torch.autograd import Variable
 from torchvision import transforms
 import PIL 
-#import cv2
+import cv2
+import os
 
 #This is the Label
 Labels = { 0 : '0',
@@ -23,37 +20,23 @@ Labels = { 0 : '0',
            5 : '5',
         }
 
-
-# In[ ]:
-
-
 # Let's preprocess the inputted frame
 
 data_transforms = transforms.Compose(
     [
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(64),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0,0.225])
+        transforms.ToTensor()
     ]
 ) 
+print(os.getcwd())
+print("Load model")
 
-model  = torch.load("cnn_stanford.pkl") #Load model to CPU
-model  = model.cuda()
-model.eval()                #set the device to eval() mode for testing
+def restore_net():
+    model  = torch.load('net.pkl')
+    model  = model.cuda()
+    model.eval()                #set the device to eval() mode for testing
 
-
-# In[ ]:
-
-
-#Set the Webcam 
-def Webcam_720p():
-    cap.set(3,1280)
-    cap.set(4,720)
-
-
-# In[ ]:
 
 
 def argmax(prediction):
@@ -67,8 +50,6 @@ def argmax(prediction):
 
     return result,score
 
-
-# In[ ]:
 
 
 def preprocess(image):
@@ -84,41 +65,38 @@ def preprocess(image):
     return image                            #dimension out of our 3-D vector Tensor
 
 
-# In[ ]:
-
-
 img = cv2.imread('image.jpg')
 
-fps = 0
 show_score = 0
-show_res = 'Nothing'
+show_res = "Nothing"
 sequence = 0
 
 
-# In[ ]:
 
+if __name__ == '__main__':
+    print("Restore net...")
+    restore_net()
+    print("Restore net done!!!")
+    while True:
+        image        = img[100:450,150:570]
+        image_data   = preprocess(image)
+        print(image_data)
+        prediction   = model(image_data)
+        result,score = argmax(prediction)
+        if result >= 0.5:
+            show_res  = result
+            show_score= score
+        else:
+            show_res   = "Nothing"
+            show_score = score
+            
+        cv2.putText(image, '%s' %(show_res),(950,250), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
+        cv2.putText(image, '(score = %.5f)' %(show_score), (950,300), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
+        cv2.rectangle(image,(400,150),(900,550), (250,0,0), 2)
+        cv2.imshow("SIGN DETECTER", image)
 
-while True:
-    image        = img[100:450,150:570]
-    image_data   = preprocess(image)
-    print(image_data)
-    prediction   = model(image_data)
-    result,score = argmax(prediction)
-    if result >= 0.5:
-        show_res  = result
-        show_score= score
-    else:
-        show_res   = "Nothing"
-        show_score = score
-        
-    cv2.putText(image, '%s' %(show_res),(950,250), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
-    cv2.putText(image, '(score = %.5f)' %(show_score), (950,300), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
-    cv2.rectangle(image,(400,150),(900,550), (250,0,0), 2)
-    cv2.imshow("SIGN DETECTER", image)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyWindow("SIGN DETECTER")
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyWindow("SIGN DETECTER")
 
