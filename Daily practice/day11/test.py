@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 #https://discuss.pytorch.org/t/pytorch-trained-model-on-webcam/23928/5
+
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import numpy as np  
 import torch
 import torch.nn as nn
@@ -30,7 +33,8 @@ single_transforms = transforms.Compose(
         #transforms.Resize((64,64)),
         transforms.CenterCrop((256,256)),
         transforms.Resize((64,64)),
-        transforms.RandomHorizontalFlip(),
+        #transforms.ColorJitter(brightness=0.4, contrast=0, saturation=0, hue=0),
+        #transforms.RandomHorizontalFlip(),
         transforms.ToTensor()
         ]
 )
@@ -85,7 +89,7 @@ def restore_net(path):
     global model
     #path = path + '/day11/cnn_stanford2.pkl'
     print(path)
-    model  = torch.load(path).cpu()
+    model  = torch.load('cnn_stanford.pkl').cpu()
     model  = model.cpu()
     model.eval()                #set the device to eval() mode for testing
 
@@ -129,14 +133,18 @@ if __name__ == '__main__':
         #det_frame = cv2.resize(frame, (64, 64))
         det_frame = frame
         frame_sized, det_frame = preprocess(det_frame)
-
+        #print(det_frame.shape)
+        
         frame_sized = frame_sized.numpy().transpose((1, 2, 0))
         #rint(det_frame.shape)
 
         if count % 5 == 0:
             prediction = model(det_frame)
-            value = torch.max(prediction, 1)[1].data.numpy().squeeze()
+            prediction = prediction.detach().numpy()
+            value = np.argmax(prediction, axis=1)
+            #value = torch.max(prediction, 1)[1].data.numpy().squeeze()
             #print("dd")
+            count = 0
         count = count+1
 
         cv2.putText(frame, format(value), (560, 320), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 2, cv2.LINE_AA)
