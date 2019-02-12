@@ -11,6 +11,8 @@ from torchvision import transforms
 import PIL 
 import cv2
 import os
+import matplotlib.pyplot as plt
+import time
 
 #This is the Label
 Labels = { 0 : '0',
@@ -23,20 +25,16 @@ Labels = { 0 : '0',
 
 # Let's preprocess the inputted frame
 
-data_transforms = transforms.Compose(
+single_transforms = transforms.Compose(
         [
+        #transforms.Resize((64,64)),
+        transforms.CenterCrop((256,256)),
         transforms.Resize((64,64)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor()
         ]
 )
 
-test_transforms = transforms.Compose(
-    [
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor()
-    ]
-) 
 
 ##########################################################
 class Net(nn.Module):
@@ -83,83 +81,69 @@ class Net(nn.Module):
 ##########################################################
 
 
-def restore_net():
+def restore_net(path):
     global model
-    model  = torch.load('cnn_stanford.pkl')
+    #path = path + '/day11/cnn_stanford2.pkl'
+    print(path)
+    model  = torch.load(path).cpu()
     model  = model.cpu()
     model.eval()                #set the device to eval() mode for testing
-
-
-
-def argmax(prediction):
-    prediction = prediction.cpu()
-    p = torch.max(prediction, 1)[1].data.numpy().squeeze()
-    print(p)
-    prediction = prediction.detach().numpy()
-    print(prediction)
-    top_1 = np.argmax(prediction, axis=1)
-    score = np.amax(prediction)
-    score = '{:6f}'.format(score)
-    prediction = top_1[0]
-    result = Labels[prediction]
-
-    return result,score
-
 
 
 def preprocess(image):
     image = PIL.Image.fromarray(image) #Webcam frames are numpy array format
                                        #Therefore transform back to PIL image
-    print(image)                             
-    image = data_transforms(image)
-    image = image.float()
+    #print(image)                             
+    image = single_transforms(image)
+    #image = image.float()
+    image2 = image
     #image = Variable(image, requires_autograd=True)
     #image = image.cuda()
     image = image.unsqueeze(0) #I don't know for sure but Resnet-50 model seems to only
                                #accpets 4-D Vector Tensor so we need to squeeze another
-    return image                            #dimension out of our 3-D vector Tensor
-
-
-img = cv2.imread('image1.jpg')
- 
-show_score = 0
-show_res = "Nothing"
-sequence = 0
+    return image2, image                            #dimension out of our 3-D vector Tensor
 
 
 
 if __name__ == '__main__':
-    print("Restore net...")
-    restore_net()
-    print("Restore net done!!!")
-    
-    imgd        = img
-    #imgd = cv2.resize(image, (64, 64))
-    print(imgd.shape)
-    image_data   = preprocess(imgd)
-    print(image_data.shape)
-    
-    prediction   = model(image_data)
-    print("Prediction: %s" %format(prediction))
-    result,score = argmax(prediction)
-    print("Result: %s" %format(result))
-    print("Score: %s" %format(score))
-    if float(score) >= 0.5:
-        show_res  = result
-        show_score= score
-    else:
-        show_res   = "Nothing"
-        show_score = score
-        
-        
-    #cv2.putText(image, '%s' %(show_res),(950,250), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
-    #cv2.putText(image, '(score = %.5f)' %(float(show_score)), (950,300), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
-    #cv2.rectangle(image,(400,150),(900,550), (250,0,0), 2)
-    while True:
-        image = cv2.resize(imgd, (480, 600))
-        cv2.imshow("SIGN DETECTER", image)
+    print("Restore net from :")
+    path = os.getcwd()+'/day11/cnn_stanford2.pkl'
+    print(path)
+    try:
+        restore_net(path)
+        print("Restore net done!!!")
+    except:
+        print("Restore error!!  Check path.")
+        os.system('shutdown -s')
+        time.sleep(100)
+    time.sleep(2)
 
+    print("Reading from webcam...")
+
+    count = 0
+    cap = cv2.VideoCapture(0)
+
+    while 1:
+        _ , frame = cap.read()
+        frame = cv2.resize(frame, (640, 360))
+        #det_frame = cv2.resize(frame, (64, 64))
+        det_frame = frame
+        frame_sized, det_frame = preprocess(det_frame)
+
+        frame_sized = frame_sized.numpy().transpose((1, 2, 0))
+        #rint(det_frame.shape)
+
+        if count % 5 == 0:
+            prediction = model(det_frame)
+            value = torch.max(prediction, 1)[1].data.numpy().squeeze()
+            #print("dd")
+        count = count+1
+
+        cv2.putText(frame, format(value), (560, 320), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.imshow("SIGN DETECTER", frame)
+        cv2.imshow("SIGN ", frame_sized)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     cv2.destroyWindow("SIGN DETECTER")
+
 
